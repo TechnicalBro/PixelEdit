@@ -1,16 +1,11 @@
 package com.philipparke.pixeledit;
 
-import java.awt.BasicStroke;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.Point;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.util.*;
+import java.util.List;
 
 import javax.swing.JComponent;
 
@@ -22,17 +17,37 @@ public class Display extends JComponent implements ActionListener
 							screenHeight,
 							centerX,
 							centerY,
+                            zoom,
+                            sourceWidth,
+                            sourceHeight,
+                            zoomWidth,
+                            zoomHeight,
 							lineHeight = 12,
 							padding = 2;
 	
 	private Point 			overheadOrigin,
-							loupeOrigin;
+                            overheadCenter,
+                            overheadImageOrigin,
+							loupeOrigin,
+                            loupeCenter,
+                            loupeImageOrigin,
+                            paletteOrigin;
 	
 	private Dimension 		overheadSize,
-							loupeSize;
-	
-	private ImageHandler	imagehandler;
-	
+							loupeSize,
+                            paletteSquareSize,
+                            paletteSize;
+
+
+    private ImageHandler    imageHandler;
+
+    private UserInterface   ui;
+
+    int[]   rgbColor;
+
+    Color[] paletteColors;
+
+    private static final int DEFAULT_ZOOM = 5;
 
 	private Font consoleFont = new Font("Monospaced", Font.PLAIN, lineHeight);
 
@@ -52,25 +67,54 @@ public class Display extends JComponent implements ActionListener
 		this.overheadSize = new Dimension(screenWidth, screenHeight/2);
 		this.loupeSize = new Dimension(screenWidth, screenHeight/2);
 		this.overheadOrigin = new Point(0, 0);
+        this.overheadCenter = new Point(overheadOrigin.x+overheadSize.width/2, overheadOrigin.y+overheadSize.height/2);
 		this.loupeOrigin = new Point(0, centerY);
-		this.imagehandler = new ImageHandler();
-		
-		// Set up a new image by default
-		imagehandler.newImage(overheadSize.width, overheadSize.height);
-		
-		// Add the event listener
-		addMouseListener(imagehandler);
-		
-		// Just adds some pretty colors
-		for ( int i = 0; i < overheadSize.width; i++ )
-		{
-			for ( int j = 0; j < overheadSize.height; j++ )
-			{
-				imagehandler.setPixelRGB( i, j, i%255, j%255, 128 );
-			}
-		}
+        this.loupeCenter = new Point(loupeOrigin.x+loupeSize.width/2, loupeOrigin.y+loupeSize.height/2);
+        this.zoom = DEFAULT_ZOOM;
+
 	}
 
+    public void setImageHandler(ImageHandler im)
+    {
+        imageHandler = im;
+        setOverheadImageOrigin(imageHandler.getImage());
+        sourceWidth = imageHandler.getWidth();
+        sourceHeight = imageHandler.getHeight();
+        setZoom(DEFAULT_ZOOM);
+    }
+
+    public void setPalette(Point origin, Dimension squareSize, Color[] colors)
+    {
+        paletteOrigin = origin;
+        paletteSquareSize = squareSize;
+        paletteColors = colors;
+        paletteSize = new Dimension(paletteSquareSize.width, paletteSquareSize.height*colors.length);
+    }
+
+    public void setUI(UserInterface ui)
+    {
+        this.ui = ui;
+    }
+
+    public void setOverheadImageOrigin(BufferedImage image)
+    {
+        overheadImageOrigin = new Point(overheadCenter.x - (image.getWidth()/2), overheadCenter.y - (image.getHeight()/2));
+    }
+
+    public void setLoupeImageOrigin(int width, int height)
+    {
+        loupeImageOrigin = new Point(loupeCenter.x - (width/2), loupeCenter.y - (height/2));
+    }
+
+    public void setZoom(int factor)
+    {
+        zoom = factor;
+        zoomHeight = sourceHeight*zoom;
+        zoomWidth = sourceWidth*zoom;
+        setLoupeImageOrigin(zoomWidth, zoomHeight);
+    }
+
+    public Point getLoupeOrigin(){ return loupeOrigin; }
 
 	public void drawConsoleWindow(Graphics2D g2, Point origin, Dimension size, List<String> source)
 	{
@@ -104,16 +148,50 @@ public class Display extends JComponent implements ActionListener
 		g2.setFont(consoleFont);
 		g2.drawString(source, x, y);
 	}
-	
+
+    public void drawOverhead(Graphics2D g2, BufferedImage image)
+    {
+        g2.drawImage(image, overheadImageOrigin.x, overheadImageOrigin.y, this);
+    }
+
+    public void drawPalette(Graphics2D g2, Color[] palette)
+    {
+        for (int i = 0; i < palette.length; i++)
+        {
+            g2.setColor(palette[i]);
+            g2.fillRect(paletteOrigin.x, paletteOrigin.y+(i*paletteSquareSize.height), paletteSquareSize.width, paletteSquareSize.height);
+        }
+    }
+
+    public void drawLoupe(Graphics2D g2, ImageHandler image)
+    {
+        for (int x = 0; x < sourceWidth; x++)
+        {
+            for (int y = 0; y < sourceHeight; y++)
+            {
+                rgbColor = image.getPixelRGB(x, y);
+                g2.setColor(new Color(rgbColor[0], rgbColor[1], rgbColor[2]));
+                g2.fillRect(loupeImageOrigin.x + (x * zoom), loupeImageOrigin.y + (y * zoom), zoom, zoom);
+            }
+        }
+    }
+
+    public void drawCenterLine(Graphics2D g2)
+    {
+        g2.setColor(Color.white);
+        g2.setStroke(new BasicStroke(3));
+        g2.drawLine(0, centerY, screenWidth, centerY);
+    }
+
 	public void showImage(Graphics2D g2, Point origin, Dimension size, BufferedImage source)
 	{
 		showImage(g2, origin, size, 1.0, source);
 	}
 	
-	public void showImage(Graphics2D g2, Point origin, Dimension size, double zoom, BufferedImage source)
+	public void showImage(Graphics2D g2, Point center, Dimension size, double zoom, BufferedImage source)
 	{
-		int x = origin.x;
-		int y = origin.y;
+		int x = center.x-(source.getWidth()/2);
+		int y = center.y-(source.getHeight()/2);
 		
 		// Apply zoom
 		g2.scale(zoom, zoom);
@@ -122,6 +200,18 @@ public class Display extends JComponent implements ActionListener
 		g2.drawImage( source, x, y, this);
 
 	}
+
+    public Point translatePoint(String view, Point p)
+    {
+        if (view.toLowerCase().equals("overhead"))
+        {
+            return new Point(p.x - overheadImageOrigin.x, p.y - overheadImageOrigin.y);
+        }
+        else
+        {
+            return new Point((p.x - loupeImageOrigin.x)/zoom, (p.y - loupeImageOrigin.y)/zoom);
+        }
+    }
 
 	@Override
 	public Dimension getPreferredSize()
@@ -135,16 +225,25 @@ public class Display extends JComponent implements ActionListener
 		// Convert g to G2D
 		Graphics2D g2 = (Graphics2D)g;
 
-		// Draw the background
+		// Draw the loupe background
 		g2.setColor(backgroundColor);
-		g2.fillRect(0, 0, screenWidth, screenHeight);
+		g2.fillRect(0, centerY, screenWidth, screenHeight/2);
+
+        // Draw the loupe image
+        if (imageHandler != null)
+            drawLoupe(g2, imageHandler);
+
+        // Draw the overhead background
+        g2.setColor(backgroundColor);
+        g2.fillRect(0, 0, screenWidth, screenHeight/2);
+
+        drawCenterLine(g2);
 
 		// Draw the overhead image
-		showImage(g2, overheadOrigin, overheadSize, imagehandler.getImage());
+		//showImage(g2, overheadCenter, overheadSize, Main.getUI().getImage());
+        drawOverhead(g2, imageHandler.getImage());
 
-		
-		// Draw the loupe image
-		showImage(g2, loupeOrigin, loupeSize, 2.0, imagehandler.getImage());
+        drawPalette(g2, ui.getPalette());
 		
 		// Release graphics resources
 		g2.dispose();

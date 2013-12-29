@@ -1,47 +1,51 @@
 package com.philipparke.pixeledit;
 
-import java.awt.Dimension;
-import java.awt.Point;
+import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-
 import javax.imageio.ImageIO;
-import javax.swing.JComponent;
-import javax.swing.SwingUtilities;
-import javax.swing.event.MouseInputListener;
 
-public class ImageHandler implements MouseInputListener
+public class ImageHandler
 {
-	private BufferedImage	workingImage;
+	private BufferedImage	image;
 	
-	private Dimension		workingImageSize;
-	
-	private Point 			clickLocation;
-	
+	private Dimension		imageSize;
+
 	// File for output
-	private File outFile;
+	private File             outFile;
 	
 	private String 			fileName,
-							format;
+							        format;
+
+    public void setFileName(String name){fileName = name; }
+    public void setFormat(String f){ format = f; };
+
+    public int getWidth(){ return imageSize.width; }
+    public int getHeight(){ return imageSize.height; }
 	
 	public BufferedImage getImage()
 	{
-		return workingImage;
+		return image;
 	}
 	
 	public void newImage(int width, int height)
 	{
-		workingImageSize = new Dimension(width, height);
-		workingImage = new BufferedImage(workingImageSize.width, workingImageSize.height, BufferedImage.TYPE_INT_RGB);
+        imageSize = new Dimension(width, height);
+        image = new BufferedImage(imageSize.width, imageSize.height, BufferedImage.TYPE_INT_RGB);
 	}
+
+    public void setImage(BufferedImage newImage)
+    {
+        image = newImage;
+    }
 	
 	public void saveImage(String fileName, String format)
 	{
 		// Set filename and format
-		this.fileName = fileName;
-		this.format = format;
+		setFileName(fileName);
+		setFormat(format);
 		
 		saveImage();
 	}
@@ -51,12 +55,12 @@ public class ImageHandler implements MouseInputListener
 		if (fileName != null && format != null)
 		{
 
-			this.outFile = new File(fileName);
+		    outFile = new File(fileName);
 
 			try
 			{
 				// Attempt to write the new buffered image in the specified format to the out file 
-				ImageIO.write( this.workingImage, this.format, this.outFile );
+				ImageIO.write( image, format, outFile );
 			}
 			catch (IOException ex)
 			{
@@ -82,68 +86,38 @@ public class ImageHandler implements MouseInputListener
 	// Set individual pixels in the image using normal rgb int values
 	public void setPixelRGB( int x, int y, int r, int g, int b )
 	{
-		if (x >= 0 && x <= workingImage.getWidth() && y >= 0 && y <= workingImage.getHeight())
-			workingImage.setRGB(x, y, convertRGB( r, g, b ));
+		if (x >= 0 && x <= image.getWidth() && y >= 0 && y <= image.getHeight())
+            image.setRGB(x, y, convertRGB( r, g, b ));
 	}
 	
 	// Set individual pixels in the image using normal argb int values
 	public void setPixelRGB( int x, int y, int a, int r, int g, int b )
 	{
-		workingImage.setRGB(x, y, convertARGB( a, r, g, b ));
+        image.setRGB(x, y, convertARGB( a, r, g, b ));
 	}
+
+    public void setPixelColor(int x, int y, Color c)
+    {
+        if (x >= 0 && x <= image.getWidth() && y >= 0 && y <= image.getHeight())
+            image.setRGB(x, y, convertRGB(c.getRed(), c.getGreen(), c.getBlue()));
+    }
 	
 	public int getPixel(int x, int y)
 	{
-		return workingImage.getRGB(x, y);
+        if (x >= 0 && x <= image.getWidth() && y >= 0 && y <= image.getHeight())
+		    return image.getRGB(x, y);
+        else
+            return -1;
 	}
 
-	@Override
-	public void mouseClicked(MouseEvent e) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void mousePressed(MouseEvent e) {
-		if (e.getButton() == MouseEvent.BUTTON1)
-		{
-			clickLocation = e.getPoint();
-			System.out.println(String.format("Clicked %d %d", clickLocation.x, clickLocation.y));
-			setPixelRGB(clickLocation.x, clickLocation.y, 100, 100, 100);
-			System.out.println(getPixel(clickLocation.x, clickLocation.y));
-			
-		}
-		
-	}
-
-	@Override
-	public void mouseReleased(MouseEvent e) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void mouseEntered(MouseEvent e) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void mouseExited(MouseEvent e) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void mouseDragged(MouseEvent e) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void mouseMoved(MouseEvent e) {
-		// TODO Auto-generated method stub
-		
-	}
-	
+    public int[] getPixelRGB(int x, int y)
+    {
+        if (x >= 0 && x <= image.getWidth() && y >= 0 && y <= image.getHeight())
+        {
+            int color = image.getRGB(x, y);
+            return new int[]{(color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF};
+        }
+        else
+            return new int[]{-1};
+    }
 }
