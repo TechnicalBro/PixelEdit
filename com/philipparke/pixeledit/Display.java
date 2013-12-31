@@ -13,7 +13,7 @@ public class Display extends JComponent implements ActionListener
 {
 
 	private Color 			backgroundColor;
-	private int 			screenWidth, 
+	private int 			screenWidth,
 							screenHeight,
 							centerX,
 							centerY,
@@ -31,12 +31,18 @@ public class Display extends JComponent implements ActionListener
 							loupeOrigin,
                             loupeCenter,
                             loupeImageOrigin,
-                            paletteOrigin;
+                            paletteOrigin,
+                            zoomOrigin,
+                            selectedColorsOrigin,
+                            saveOrigin;
 	
 	private Dimension 		overheadSize,
 							loupeSize,
                             paletteSquareSize,
-                            paletteSize;
+                            paletteSize,
+                            zoomSquareSize,
+                            selectedColorsSize,
+                            saveSquareSize;
 
 
     private ImageHandler    imageHandler;
@@ -45,11 +51,13 @@ public class Display extends JComponent implements ActionListener
 
     int[]   rgbColor;
 
-    Color[] paletteColors;
+    Color[] paletteColors,
+            selectedColors = new Color[2];
 
     private static final int DEFAULT_ZOOM = 5;
 
-	private Font consoleFont = new Font("Monospaced", Font.PLAIN, lineHeight);
+	private Font consoleFont = new Font("Monospaced", Font.PLAIN, lineHeight),
+                 controlFont = new Font("Monospaced", Font.BOLD, 20);
 
 	public Display()
 	{
@@ -59,27 +67,32 @@ public class Display extends JComponent implements ActionListener
 
 	public Display(int screenWidth, int screenHeight)
 	{
-		this.backgroundColor = Color.black;
-		this.screenWidth = screenWidth;
-		this.screenHeight = screenHeight;
-		this.centerX = screenWidth/2;
-		this.centerY = screenHeight/2;
-		this.overheadSize = new Dimension(screenWidth, screenHeight/2);
-		this.loupeSize = new Dimension(screenWidth, screenHeight/2);
-		this.overheadOrigin = new Point(0, 0);
-        this.overheadCenter = new Point(overheadOrigin.x+overheadSize.width/2, overheadOrigin.y+overheadSize.height/2);
-		this.loupeOrigin = new Point(0, centerY);
-        this.loupeCenter = new Point(loupeOrigin.x+loupeSize.width/2, loupeOrigin.y+loupeSize.height/2);
-        this.zoom = DEFAULT_ZOOM;
-
+		backgroundColor = Color.black;
+        //setDisplaySize(screenWidth, screenHeight);
+        zoom = DEFAULT_ZOOM;
 	}
+
+    public void setDisplaySize(int width, int height)
+    {
+        screenWidth = width;
+        screenHeight = height;
+        centerX = screenWidth/2;
+        centerY = screenHeight/2;
+        overheadSize = new Dimension(sourceWidth, sourceHeight);
+        loupeSize = new Dimension(screenWidth, screenHeight);
+        overheadOrigin = new Point(screenWidth-sourceWidth, 0);
+        System.out.println(overheadOrigin);
+        overheadCenter = new Point(overheadOrigin.x+overheadSize.width/2, overheadOrigin.y+overheadSize.height/2);
+        loupeOrigin = new Point(0, 0);
+        loupeCenter = new Point(loupeOrigin.x+loupeSize.width/2, loupeOrigin.y+loupeSize.height/2);
+    }
 
     public void setImageHandler(ImageHandler im)
     {
         imageHandler = im;
-        setOverheadImageOrigin(imageHandler.getImage());
         sourceWidth = imageHandler.getWidth();
         sourceHeight = imageHandler.getHeight();
+        setOverheadOrigin();
         setZoom(DEFAULT_ZOOM);
     }
 
@@ -91,14 +104,37 @@ public class Display extends JComponent implements ActionListener
         paletteSize = new Dimension(paletteSquareSize.width, paletteSquareSize.height*colors.length);
     }
 
+    public void setZoomControls(Point origin, Dimension squareSize)
+    {
+        zoomOrigin = origin;
+        zoomSquareSize = squareSize;
+    }
+
+    public void setSaveControls(Point origin, Dimension squareSize)
+    {
+        saveOrigin = origin;
+        saveSquareSize = squareSize;
+    }
+
+    public void setSelectedColorsDisplay(Point origin, Dimension squareSize)
+    {
+        selectedColorsOrigin = origin;
+        selectedColorsSize = squareSize;
+    }
+
+    public void setSelectedColors(int index, Color color)
+    {
+        selectedColors[index] = color;
+    }
+
     public void setUI(UserInterface ui)
     {
         this.ui = ui;
     }
 
-    public void setOverheadImageOrigin(BufferedImage image)
+    public void setOverheadOrigin()
     {
-        overheadImageOrigin = new Point(overheadCenter.x - (image.getWidth()/2), overheadCenter.y - (image.getHeight()/2));
+        overheadOrigin = new Point(screenWidth-sourceWidth, 0);
     }
 
     public void setLoupeImageOrigin(int width, int height)
@@ -109,6 +145,16 @@ public class Display extends JComponent implements ActionListener
     public void setZoom(int factor)
     {
         zoom = factor;
+        if (zoom < 1){ zoom = 1;}
+        zoomHeight = sourceHeight*zoom;
+        zoomWidth = sourceWidth*zoom;
+        setLoupeImageOrigin(zoomWidth, zoomHeight);
+    }
+
+    public void changeZoom(int step)
+    {
+        zoom += step;
+        if (zoom < 1){ zoom = 1;}
         zoomHeight = sourceHeight*zoom;
         zoomWidth = sourceWidth*zoom;
         setLoupeImageOrigin(zoomWidth, zoomHeight);
@@ -151,7 +197,7 @@ public class Display extends JComponent implements ActionListener
 
     public void drawOverhead(Graphics2D g2, BufferedImage image)
     {
-        g2.drawImage(image, overheadImageOrigin.x, overheadImageOrigin.y, this);
+        g2.drawImage(image, overheadOrigin.x, overheadOrigin.y, this);
     }
 
     public void drawPalette(Graphics2D g2, Color[] palette)
@@ -161,6 +207,49 @@ public class Display extends JComponent implements ActionListener
             g2.setColor(palette[i]);
             g2.fillRect(paletteOrigin.x, paletteOrigin.y+(i*paletteSquareSize.height), paletteSquareSize.width, paletteSquareSize.height);
         }
+    }
+
+    public void drawSelectedColors(Graphics2D g2, Color[] selectedColors)
+    {
+        int x = selectedColorsOrigin.x;
+        int y = selectedColorsOrigin.y;
+        for (int i = 0; i < selectedColors.length; i++)
+        {
+            x += (i*selectedColorsSize.width);
+            g2.setColor(selectedColors[i]);
+            g2.fillRect(x, y, selectedColorsSize.width, selectedColorsSize.height);
+        }
+    }
+
+    public void drawZoomControls(Graphics2D g2)
+    {
+        int x = zoomOrigin.x,
+            y = zoomOrigin.y;
+        String chars = "+-";
+
+        for (int i = 0; i < 2; i++)
+        {
+            g2.setColor(Color.gray);
+            y += (i*zoomSquareSize.height);
+            g2.fillRect(x, y, zoomSquareSize.width, zoomSquareSize.height);
+
+            g2.setColor(Color.black);
+            g2.setFont(controlFont);
+            g2.drawString(chars.substring(i, i+1), x+4, y+15);
+        }
+    }
+
+    public void drawSaveControls(Graphics2D g2)
+    {
+        int x = saveOrigin.x,
+            y = saveOrigin.y;
+
+        g2.setColor(Color.gray);
+        g2.fillRect(x, y, saveSquareSize.width, saveSquareSize.height);
+
+        g2.setColor(Color.blue);
+        g2.setFont(controlFont);
+        g2.drawString("S", x+4, y+15);
     }
 
     public void drawLoupe(Graphics2D g2, ImageHandler image)
@@ -205,7 +294,7 @@ public class Display extends JComponent implements ActionListener
     {
         if (view.toLowerCase().equals("overhead"))
         {
-            return new Point(p.x - overheadImageOrigin.x, p.y - overheadImageOrigin.y);
+            return new Point(p.x - overheadOrigin.x, p.y - overheadOrigin.y);
         }
         else
         {
@@ -225,25 +314,28 @@ public class Display extends JComponent implements ActionListener
 		// Convert g to G2D
 		Graphics2D g2 = (Graphics2D)g;
 
-		// Draw the loupe background
+		// Draw the background
 		g2.setColor(backgroundColor);
-		g2.fillRect(0, centerY, screenWidth, screenHeight/2);
+		g2.fillRect(0, 0, screenWidth, screenHeight);
 
         // Draw the loupe image
         if (imageHandler != null)
             drawLoupe(g2, imageHandler);
 
-        // Draw the overhead background
-        g2.setColor(backgroundColor);
-        g2.fillRect(0, 0, screenWidth, screenHeight/2);
-
-        drawCenterLine(g2);
-
 		// Draw the overhead image
-		//showImage(g2, overheadCenter, overheadSize, Main.getUI().getImage());
         drawOverhead(g2, imageHandler.getImage());
 
+        // Draw the palette
         drawPalette(g2, ui.getPalette());
+
+        // Draw the selected colors
+        drawSelectedColors(g2, selectedColors);
+
+        // Draw the zoom controls
+        drawZoomControls(g2);
+
+        // Draw the save controls
+        drawSaveControls(g2);
 		
 		// Release graphics resources
 		g2.dispose();

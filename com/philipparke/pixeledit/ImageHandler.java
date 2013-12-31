@@ -55,7 +55,7 @@ public class ImageHandler
 		if (fileName != null && format != null)
 		{
 
-		    outFile = new File(fileName);
+		    outFile = new File(fileName+"."+format);
 
 			try
 			{
