@@ -142,6 +142,26 @@ public class Display extends JComponent implements ActionListener
         loupeImageOrigin = new Point(loupeCenter.x - (width/2), loupeCenter.y - (height/2));
     }
 
+    public void moveLeft()
+    {
+        loupeImageOrigin.x-=5;
+    }
+
+    public void moveRight()
+    {
+        loupeImageOrigin.x+=5;
+    }
+
+    public void moveUp()
+    {
+        loupeImageOrigin.y-=5;
+    }
+
+    public void moveDown()
+    {
+        loupeImageOrigin.y+=5;
+    }
+
     public void setZoom(int factor)
     {
         zoom = factor;

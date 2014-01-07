@@ -73,6 +73,7 @@ public class Main extends JComponent
 		//window.addKeyListener(tiler);
 		//window.addMouseMotionListener(display);
 		window.addMouseListener(ui);
+        window.addKeyListener(ui);
 
         System.out.println(display.getSize());
         System.out.println(window.getSize());

@@ -14,7 +14,8 @@ public class ImageHandler
 	private Dimension		imageSize;
 
 	// File for output
-	private File             outFile;
+	private File             outFile,
+                             inFile;
 	
 	private String 			fileName,
 							        format;
@@ -71,6 +72,35 @@ public class ImageHandler
 		else
 			System.out.println("Filename or format not set.");
 	}
+
+    public void loadImage(String fileName, String format)
+	{
+		// Set filename and format
+		setFileName(fileName);
+		setFormat(format);
+
+		loadImage();
+	}
+
+    public void loadImage()
+    {
+        if (fileName != null && format != null)
+        {
+            inFile = new File(fileName + "." + format);
+
+            try
+            {
+                image = ImageIO.read(inFile);
+            }
+            catch (IOException ex)
+            {
+                System.out.println(ex.toString());
+                System.out.println("Could not find file " + inFile);
+            }
+        }
+        else
+            System.out.println("Filename or format not set.");
+    }
 	
 	// Convert separate int values to java color int
 	public int convertRGB( int r, int g, int b )

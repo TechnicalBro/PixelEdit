@@ -2,6 +2,8 @@ package com.philipparke.pixeledit;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.image.BufferedImage;
@@ -10,7 +12,7 @@ import java.awt.image.BufferedImage;
 /**
  * Created by philip on 29/12/13.
  */
-public class UserInterface implements MouseListener
+public class UserInterface implements MouseListener, KeyListener
 {
     private Point               clickLocation;
 
@@ -192,6 +194,22 @@ public class UserInterface implements MouseListener
             {
                 //System.out.println("Loupe = " + Main.getDisplay().translatePoint("loupe", click));
                 setClickLocation(display.translatePoint("loupe", click));
+                if (clickLocation.x < 0)
+                {
+                    display.moveLeft();
+                }
+                else if (clickLocation.x > image.getWidth())
+                {
+                   display.moveRight();
+                }
+                if (clickLocation.y < 0)
+                {
+                    display.moveUp();
+                }
+                else if (clickLocation.y > image.getHeight())
+                {
+                    display.moveDown();
+                }
                 if (e.getButton() == MouseEvent.BUTTON1)
                     image.setPixelColor(clickLocation.x, clickLocation.y, primaryColor);
                 else
@@ -217,6 +235,37 @@ public class UserInterface implements MouseListener
 
     @Override
     public void mouseExited(MouseEvent e) {
+
+    }
+
+    @Override
+    public void keyTyped(KeyEvent e) {
+
+    }
+
+    @Override
+    public void keyPressed(KeyEvent e) {
+        int code = e.getKeyCode();
+
+        switch (code)
+        {
+            case KeyEvent.VK_UP:
+                display.moveDown();
+                break;
+            case KeyEvent.VK_DOWN:
+                display.moveUp();
+                break;
+            case KeyEvent.VK_LEFT:
+                display.moveRight();
+                break;
+            case KeyEvent.VK_RIGHT:
+                display.moveLeft();
+                break;
+        }
+    }
+
+    @Override
+    public void keyReleased(KeyEvent e) {
 
     }
 }
